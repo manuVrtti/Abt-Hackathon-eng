@@ -1,0 +1,85 @@
+# Copy to hackeval.yaml (or set HACKEVAL_CONFIG) and fill in.
+# Everything marked PUBLISH must be published to participants before the event
+# (`hackeval public-kit kit/` writes these values into published_rules.json).
+
+database_url: postgresql+psycopg://hackeval:CHANGE_ME@localhost:5432/hackeval
+# database_url: sqlite:///data/hackeval.db      # fine for laptop development
+data_dir: data            # snapshots, bundles, code, outbox, reports (~200 GB on the event server)
+tracks_dir: tracks        # point at the private folder holding the real hidden tests
+github_token_env: GITHUB_TOKEN   # a read-only token; ~100 repos per GraphQL call
+appeal_window_hours: 24          # PUBLISH. Do not go below 12.
+
+event:
+  name: "Example Hackathon 2026"
+  start: 2026-11-01T09:00:00+05:30      # PUBLISH
+  deadline: 2026-11-03T09:00:00+05:30   # PUBLISH
+  public_base_url: https://appeals.example.org   # where `hackeval serve` is reachable
+  replay: false            # true only for dry runs on a past hackathon
+
+snapshot:
+  clone_attempts: 3
+  retry_delays_min: [15, 15]   # 3 tries over 30 minutes
+  concurrency: 32
+  recheck_after_hours: 24      # second look for rewritten history
+
+rules:
+  min_commits: 5                 # PUBLISH (decision still open in the plan)
+  first_commit_share_flag: 0.70  # PUBLISH
+  repo_size_limit_mb: 200        # PUBLISH
+  repo_size_action: flag         # flag | hard_fail
+  duplicate_jaccard_flag: 0.80
+  boilerplate_min_repos: 5
+
+tester:
+  published_ip: 203.0.113.10     # PUBLISH: the server's fixed IP
+  user_agent: "HackEval-Tester/1.0 (+https://example.org/hackathon/tester)"   # PUBLISH
+  request_id_header: X-Eval-Request-ID    # PUBLISH
+  attempts: 3
+  spread_hours: 6
+  warmup_timeout_s: 90
+  request_timeout_s: 20
+  per_host_concurrency: 2
+  per_platform_concurrency: 8
+  retest_window_hours: 24
+
+weights:          # PUBLISH (a starting suggestion in the plan)
+  tests: 0.50
+  quality: 0.15
+  authenticity: 0.15
+  llm: 0.20
+
+plagiarism:
+  flag_similarity: 0.70
+  candidate_similarity: 0.50
+  # jplag_jar: /opt/jplag/jplag.jar     # optional confirmation step for candidate pairs
+
+llm:
+  provider: anthropic          # anthropic | openai | mock (mock = offline, for dry runs)
+  model: claude-haiku-5-5      # for openai, set the model name you want to use
+  top_n: 500
+  token_cap: 30000
+  second_pass_band: 50
+  batch: true
+  # rubric_path: rubric.yaml   # default: hackeval/rubric/default.yaml (PUBLISH it)
+
+ranking:
+  to_voting: 200
+  cutoff_review_band: 20
+  # track_quotas: {track-a: 70, track-b: 65, track-c: 65}
+
+sandbox:
+  cpus: 2
+  memory: 2g
+  build_network: true          # dependency installs usually need the network
+  run_network: hackeval-internal
+  integrity_gap_flag: 20
+
+judging:
+  judges_per_team: 3
+  scale_max: 10
+  criteria: {technical_depth: 0.3, product_and_ux: 0.25, problem_fit: 0.25, presentation: 0.2}
+  finale_criteria: {live_change_request: 0.4, demo_quality: 0.3, technical_depth: 0.3}
+
+audit:
+  sample_rate: 0.02
+  max_error_rate: 0.01

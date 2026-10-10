@@ -1,0 +1,23 @@
+{% extends "_base.html" %}
+{% block title %}Live test log{% endblock %}
+{% block body %}
+<h1>Live test log: {{ team_name or team_id }}</h1>
+<p class="muted">{{ event }} · team {{ team_id }} · {{ live_url }}</p>
+<p>Our tester could not get a passing response from your live link, so the test component scored zero.
+You are <strong>not</strong> eliminated for this alone. Every request we sent is listed below.</p>
+<p>Requests came from IP <code>{{ tester.ip }}</code> with User-Agent <code>{{ tester.user_agent }}</code>
+and a <code>{{ tester.request_id_header }}</code> header you can search for in your server logs.</p>
+<h2>Attempts</h2>
+<table><tr><th>#</th><th>Started (UTC)</th><th>Reachable</th><th>Score</th><th>Error</th></tr>
+{% for a in attempts %}<tr><td>{{ a.attempt }}</td><td>{{ a.started_at }}</td><td>{{ a.reachable }}</td><td>{{ a.score }}</td><td>{{ a.error or "" }}</td></tr>{% endfor %}
+</table>
+<h2>Requests</h2>
+<table><tr><th>Request ID</th><th>Time (UTC)</th><th>Request</th><th>Status</th><th>Latency</th><th>Error / body</th></tr>
+{% for r in requests %}<tr><td><code>{{ r.request_id }}</code></td><td>{{ r.time }}</td><td>{{ r.method }} {{ r.url }}</td>
+<td>{{ r.status if r.status is not none else "-" }}</td><td>{{ "%.0f ms"|format(r.latency_ms) if r.latency_ms else "-" }}</td>
+<td>{% if r.error %}<span class="bad">{{ r.error }}</span>{% else %}<pre>{{ r.body }}</pre>{% endif %}</td></tr>{% endfor %}
+</table>
+{% if retest_url %}<h2>Request a re-test</h2>
+<p>You can request <strong>one</strong> re-test before {{ retest_expires_at }} UTC.</p>
+<p><a class="btn" href="{{ retest_url }}">Request a re-test</a></p><p class="muted">{{ retest_url }}</p>{% endif %}
+{% endblock %}

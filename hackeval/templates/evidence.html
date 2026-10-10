@@ -1,0 +1,23 @@
+{% extends "_base.html" %}
+{% block title %}Round {{ round }} result{% endblock %}
+{% block body %}
+<h1>Round {{ round }} result: {{ team_name or team_id }}</h1>
+<p class="muted">{{ event }} · team {{ team_id }}</p>
+<p class="bad"><strong>Your submission did not pass this round.</strong></p>
+<p>{{ reason }}</p>
+<p>Judged version: commit <code>{{ frozen_commit or "none recorded" }}</code>, frozen at {{ frozen_at or "n/a" }} (UTC).</p>
+{% if checks %}<h2>Evidence</h2>
+{% for c in checks %}
+<h3>{{ c.rule }} <span class="bad">({{ c.result }})</span></h3>
+<p>{{ c.summary }}</p>
+<p class="muted">Checked at {{ c.checked_at }} UTC by engine {{ c.engine_version }}</p>
+<pre>{{ c.proof | tojson(indent=2) }}</pre>
+{% endfor %}{% endif %}
+{% if flag %}<h2>Reviewed flag: {{ flag.type }}</h2><p>{{ flag.reason }}</p>
+{% if flag.reviewer_note %}<p><strong>Reviewer note:</strong> {{ flag.reviewer_note }}</p>{% endif %}
+<pre>{{ flag.evidence | tojson(indent=2) }}</pre>{% endif %}
+<h2>Appeal</h2>
+<p>If you believe this is wrong, file an appeal before <strong>{{ appeal_expires_at }} UTC</strong>. A person reviews every appeal.</p>
+<p><a class="btn" href="{{ appeal_url }}">File an appeal</a></p>
+<p class="muted">{{ appeal_url }}</p>
+{% endblock %}

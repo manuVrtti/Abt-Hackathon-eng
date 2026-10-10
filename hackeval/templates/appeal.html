@@ -1,0 +1,23 @@
+{% extends "_base.html" %}
+{% block title %}Appeal{% endblock %}
+{% block body %}
+<h1>Appeal: {{ team_name or team_id }}</h1>
+<p class="muted">{{ event }} · round {{ round }} · window closes {{ expires_at }} UTC</p>
+<h2>Decision</h2>
+<p>{{ reason }}</p>
+{% for c in checks %}<h3>{{ c.rule }}</h3><p>{{ c.summary }}</p><pre>{{ c.proof | tojson(indent=2) }}</pre>{% endfor %}
+{% if flag %}<h3>{{ flag.type }}</h3><p>{{ flag.reason }}</p><pre>{{ flag.evidence | tojson(indent=2) }}</pre>{% endif %}
+<h2>Your appeal</h2>
+{% if status in ("accepted", "rejected") %}
+<p>Your appeal was <strong>{{ status }}</strong>.{% if note %} Reviewer note: {{ note }}{% endif %}</p>
+{% elif closed %}
+<p class="warn">The appeal window has closed.</p>
+{% else %}
+{% if status == "open" %}<p class="ok">Appeal received. You can update it until the window closes.</p>{% endif %}
+<form method="post">
+<p>Explain why the decision is wrong. Include links or commit IDs that support your case.</p>
+<textarea name="message" required maxlength="10000">{{ message or "" }}</textarea>
+<p><button class="btn" type="submit">Submit appeal</button></p>
+</form>
+{% endif %}
+{% endblock %}

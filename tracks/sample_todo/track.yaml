@@ -1,0 +1,18 @@
+# Example track. Copy this folder for each real problem statement.
+# Keep real hidden_tests.py files out of any public repository.
+name: Sample - To-do API
+warmup_path: /health
+public_tests: public_tests.py
+hidden_tests: hidden_tests.py
+# rubric: rubric.yaml   # optional per-track rubric; defaults to the global one
+problem_statement: |
+  Build a REST API for a to-do list, deployed at a public URL.
+
+  Required endpoints (JSON in and out):
+  - GET  /health                -> 200 {"status": "ok"}
+  - POST /todos {"title": str}  -> 201 the created todo {"id", "title", "done": false}
+  - GET  /todos                 -> 200 list of todos
+  - GET  /todos/{id}            -> 200 the todo, or 404
+  - PATCH /todos/{id} {"done": bool} -> 200 the updated todo
+  - DELETE /todos/{id}          -> 204, then GET returns 404
+  Invalid input (missing or empty title) -> 400 or 422.

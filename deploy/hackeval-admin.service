@@ -1,0 +1,12 @@
+[Unit]
+Description=HackEval admin page (Streamlit)
+After=network-online.target postgresql.service
+
+[Service]
+WorkingDirectory=/srv/hackeval
+EnvironmentFile=/srv/hackeval/.env
+ExecStart=/srv/hackeval/.venv/bin/streamlit run hackeval/admin/app.py --server.address 127.0.0.1 --server.port 8501 --server.headless true
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,12 @@
+[Unit]
+Description=HackEval public appeal and re-test pages
+After=network-online.target postgresql.service
+
+[Service]
+WorkingDirectory=/srv/hackeval
+EnvironmentFile=/srv/hackeval/.env
+ExecStart=/srv/hackeval/.venv/bin/hackeval serve --host 127.0.0.1 --port 8000
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,12 @@
+{% extends "_base.html" %}
+{% block title %}Re-test{% endblock %}
+{% block body %}
+<h1>Live link re-test: {{ team_name or team_id }}</h1>
+<p class="muted">{{ event }} · {{ live_url }} · window closes {{ expires_at }} UTC</p>
+{% if used %}<p class="ok">A re-test has been requested. The result counts if it is better than your earlier attempts.</p>
+{% elif closed %}<p class="warn">The re-test window has closed.</p>
+{% else %}
+<p>You can request <strong>one</strong> re-test of your live link. Make sure it is up before you press the button: the tester starts within minutes and waits up to {{ warmup }} seconds for the first response.</p>
+<form method="post"><button class="btn" type="submit">Request my one re-test</button></form>
+{% endif %}
+{% endblock %}

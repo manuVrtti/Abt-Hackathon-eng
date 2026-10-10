@@ -1,0 +1,34 @@
+# LLM rubric (20% of the R2 score, top 500 only). Publish this file before the event.
+# Each criterion is scored 1-5. Value = weighted mean mapped to 0-100.
+version: 1
+criteria:
+  problem_fit:
+    weight: 0.5
+    question: >-
+      How completely and appropriately does the project solve the problem statement of its track?
+    levels:
+      1: Unrelated to the problem statement, or an empty/template project.
+      2: Touches the problem but the core requirements are missing or only stubbed.
+      3: Implements the core requirements in a basic way; some requirements missing or shallow.
+      4: Implements all core requirements properly with sensible design choices.
+      5: Implements all requirements well and handles edge cases, scale or real-world constraints thoughtfully.
+    examples:
+      - level: 2
+        summary: README describes a full platform; code has a login page and one hard-coded endpoint.
+      - level: 4
+        summary: All required endpoints implemented with validation and persistence; no extras.
+  originality:
+    weight: 0.5
+    question: >-
+      How original is the approach, beyond tutorials, boilerplates and the obvious solution?
+    levels:
+      1: A tutorial, template or sample app with cosmetic changes.
+      2: Mostly standard boilerplate assembled with little of the team's own design.
+      3: A conventional solution with some of the team's own logic.
+      4: A distinctive approach or feature set with substantial original logic.
+      5: A novel idea or technique, executed with clearly original work.
+    examples:
+      - level: 1
+        summary: Create React App default page with the title changed.
+      - level: 4
+        summary: Custom ranking algorithm with its own heuristics instead of a stock library call.

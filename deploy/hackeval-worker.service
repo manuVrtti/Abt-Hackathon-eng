@@ -1,0 +1,13 @@
+[Unit]
+Description=HackEval job workers
+After=network-online.target postgresql.service docker.service
+
+[Service]
+WorkingDirectory=/srv/hackeval
+EnvironmentFile=/srv/hackeval/.env
+ExecStart=/srv/hackeval/.venv/bin/hackeval worker --concurrency 32
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
