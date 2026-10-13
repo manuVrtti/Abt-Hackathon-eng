@@ -122,7 +122,9 @@ def evaluate(sub: Submission, meta: RepoMeta | None, snap: Snapshot | None,
          "largest_single_commit_share": stats.largest_commit_share,
          "largest_commit": stats.largest_commit_sha, "threshold": rules.first_commit_share_flag,
          "method": "Share of final code files whose exact content (git blob) was introduced by the first commit."}
-    if stats.final_code_files >= 3 and stats.first_commit_code_share > rules.first_commit_share_flag:
+    if not rules.first_commit_check:
+        out.append(Outcome("first_commit_dump", SKIPPED, "Check turned off for this event.", p))
+    elif stats.final_code_files >= 3 and stats.first_commit_code_share > rules.first_commit_share_flag:
         out.append(Outcome("first_commit_dump", FLAG,
                            f"The first commit already contains {stats.first_commit_code_share:.0%} of the final code.", p))
     else:

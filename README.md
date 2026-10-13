@@ -36,6 +36,21 @@ HTTPS at `event.public_base_url`) and the admin page
 (`streamlit run hackeval/admin/app.py`, keep it private, e.g. behind a VPN or
 SSH tunnel). `scripts/backup.sh` runs the daily database backup.
 
+## Vicodathon (48-hour vibe-coding hackathon)
+
+Start from `vicodathon.example.yaml`. AI-written code is expected, so:
+
+* **Off:** code-similarity plagiarism, commit-pattern scoring, the first-commit-size flag
+  (the same AI tools give similar code and few, large commits to everyone).
+* **Still caught:** repo created before the start, the same repo or live link or a fork of
+  another team, byte-identical projects, pushes after the deadline, leaked API keys.
+* **Score:** hidden API tests 60%, LLM product rubric 30% (`rubric_path: vibe`: problem fit,
+  completeness, product thinking), hygiene 10% (no leaked keys, README).
+* **Several problem statements:** `ranking.per_track: true` ranks each one on its own and splits
+  the voting places and LLM places between them by number of teams. A reviewer can move a
+  team that picked the wrong problem statement (Team lookup → Change problem statement);
+  its old results are cleared and it is re-tested.
+
 ## Problem statements (tracks)
 
 Each problem statement is a folder under `tracks_dir` (see `tracks/sample_todo`):

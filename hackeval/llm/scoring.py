@@ -1,6 +1,7 @@
 """Run the LLM rubric over the top teams.
 
-Pass 1: the top ``llm.top_n`` of the preliminary ranking, one score each.
+Pass 1: the top ``llm.top_n`` of the preliminary ranking (split between
+tracks when ranking per track), one score each.
 Pass 2: teams within ``llm.second_pass_band`` places of the voting cut-off
 are scored a second time and the two scores are averaged.
 """
@@ -167,9 +168,11 @@ def poll_batches() -> dict:
 
 
 def run_pass1() -> dict:
-    from ..ranking import preliminary
+    from ..ranking import llm_pool, preliminary
 
-    top = [r.sub_id for r in preliminary()[: get_settings().llm.top_n]]
+    rows = preliminary()
+    pool = llm_pool(rows)
+    top = [r.sub_id for r in rows if r.sub_id in pool]
     with db.session() as s:
         done = {r.submission_id for r in s.scalars(select(LLMScore).where(LLMScore.pass_no == 1,
                                                                          LLMScore.value.is_not(None)))}
@@ -177,12 +180,10 @@ def run_pass1() -> dict:
 
 
 def run_pass2() -> dict:
-    from ..ranking import final_ranking
+    from ..ranking import final_ranking, near_cutoff
 
     cfg = get_settings()
-    rows = final_ranking(write=False)
-    cut, band = cfg.ranking.to_voting, cfg.llm.second_pass_band
-    ids = [r.sub_id for r in rows if cut - band < r.rank <= cut + band]
+    ids = [r.sub_id for r in near_cutoff(final_ranking(write=False), cfg.llm.second_pass_band)]
     with db.session() as s:
         done = {r.submission_id for r in s.scalars(select(LLMScore).where(LLMScore.pass_no == 2,
                                                                          LLMScore.value.is_not(None)))}

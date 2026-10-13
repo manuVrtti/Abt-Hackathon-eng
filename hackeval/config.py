@@ -43,6 +43,9 @@ class SnapshotCfg(BaseModel):
 
 class RulesCfg(BaseModel):
     min_commits: int = 5
+    # Flag repos whose first commit already holds most of the final code. Turn
+    # off for vibe-coding events: AI app builders create the whole app at once.
+    first_commit_check: bool = True
     first_commit_share_flag: float = 0.70
     repo_size_limit_mb: int = 200
     # "flag" or "hard_fail" for repos over the published size limit.
@@ -101,6 +104,10 @@ class WeightsCfg(BaseModel):
 
 
 class PlagiarismCfg(BaseModel):
+    # Code-similarity plagiarism between teams. Turn off for vibe-coding events,
+    # where the same AI tools produce similar code for the same problem.
+    # Identical repos, live links and file trees are still flagged in Round 1.
+    enabled: bool = True
     shingle_k: int = 5
     winnow_window: int = 4
     num_perm: int = 128
@@ -126,10 +133,21 @@ class LLMCfg(BaseModel):
     max_output_tokens: int = 2048
 
 
+class QualityCfg(BaseModel):
+    # Share of the quality score per part. A part with weight 0 is not run.
+    # Vibe coding: {"readme": 35, "static": 0, "secrets": 50, "hygiene": 15}.
+    parts: dict[str, float] = {"readme": 25, "static": 40, "secrets": 20, "hygiene": 15}
+
+
 class RankingCfg(BaseModel):
     to_voting: int = 200
     cutoff_review_band: int = 20
-    # Optional fixed number of voting slots per track, e.g. {"track-a": 70}.
+    # Rank each track (problem statement) separately: voting places and LLM
+    # places are split between tracks in proportion to their teams, so a team
+    # only competes with teams solving the same problem.
+    per_track: bool = False
+    # Optional fixed voting places per track, e.g. {"ps1": 70}. Overrides the
+    # proportional split.
     track_quotas: dict[str, int] = {}
 
 
@@ -175,6 +193,7 @@ class Settings(BaseModel):
     plagiarism: PlagiarismCfg = Field(default_factory=PlagiarismCfg)
     llm: LLMCfg = Field(default_factory=LLMCfg)
     ranking: RankingCfg = Field(default_factory=RankingCfg)
+    quality: QualityCfg = Field(default_factory=QualityCfg)
     sandbox: SandboxCfg = Field(default_factory=SandboxCfg)
     judging: JudgingCfg = Field(default_factory=JudgingCfg)
     audit: AuditCfg = Field(default_factory=AuditCfg)

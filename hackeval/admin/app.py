@@ -149,7 +149,26 @@ def page_appeals(reviewer: str):
                 st.rerun()
 
 
-def page_team(_reviewer: str):
+def change_track_form(sub: Submission, reviewer: str) -> None:
+    from hackeval.review import change_track
+    from hackeval.tracks import list_tracks
+
+    with st.expander(f"Change problem statement (now: {sub.track})"):
+        st.caption("For a team that picked the wrong problem statement. Its test and LLM results for the old one "
+                   "are cleared and it is re-tested on the new one. The change is logged with your name.")
+        options = [t for t in list_tracks() if t != sub.track]
+        if not options:
+            st.write("No other tracks.")
+            return
+        new = st.selectbox("Move to", options, key=f"ct{sub.id}")
+        note = st.text_input("Reason", key=f"ctn{sub.id}")
+        if st.button("Change and re-test", key=f"ctb{sub.id}") and note:
+            st.success(change_track(sub.id, new, reviewer, note))
+        elif not note:
+            st.caption("A reason is required.")
+
+
+def page_team(reviewer: str):
     st.header("Team lookup")
     q = st.text_input("Team ID, name or repo")
     if not q:
@@ -167,6 +186,7 @@ def page_team(_reviewer: str):
         st.write({"status": sub.status, "round": sub.round, "reason": sub.status_reason, "track": sub.track,
                   "repo": sub.repo_url, "live": sub.live_url, "frozen_sha": sub.frozen_sha,
                   "frozen_at": sub.frozen_at, "frozen_source": sub.frozen_source})
+        change_track_form(sub, reviewer)
         st.markdown("**Checks**")
         st.dataframe(pd.DataFrame([(c.round, c.rule, c.result, c.overturned, c.summary) for c in s.scalars(
             select(Check).where(Check.submission_id == sub.id))], columns=["round", "rule", "result", "overturned",
@@ -219,7 +239,8 @@ def page_ranking(_reviewer: str):
     st.header("R2 ranking")
     st.caption("Computed live from current scores (nothing is written).")
     rows = final_ranking(write=False)
-    df = pd.DataFrame([{"rank": r.rank, "team_id": r.team_id, "track": r.track, "total": r.total,
+    df = pd.DataFrame([{"rank": r.rank, "track": r.track, "place_in_track": r.track_rank, "team_id": r.team_id,
+                        "total": r.total,
                         **{c: r.comps[c] for c in COMPONENTS}, "open_flags": ", ".join(r.open_flags)}
                        for r in rows])
     st.dataframe(df, hide_index=True, height=600)

@@ -67,10 +67,14 @@ async def uicheck_job(p: dict) -> dict:
 
 
 def enqueue_ui_checks(top_n: int | None = None) -> int:
-    from .ranking import preliminary
+    from .ranking import llm_pool, preliminary
 
-    n = top_n or get_settings().llm.top_n
-    rows = preliminary()[:n]
+    rows = preliminary()
+    if top_n:
+        rows = rows[:top_n]
+    else:
+        pool = llm_pool(rows)
+        rows = [r for r in rows if r.sub_id in pool]
     with db.session() as s:
         for r in rows:
             jobs.enqueue(s, "uicheck", str(r.sub_id), {"submission_id": r.sub_id}, max_attempts=2)

@@ -1,0 +1,51 @@
+# LLM rubric for vibe-coding hackathons (Vicodathon). AI-written code is expected:
+# nothing here rewards hand-written code or penalises AI use. It judges the product.
+# Each criterion is scored 1-5. Value = weighted mean mapped to 0-100. Publish before the event.
+version: 1
+criteria:
+  problem_fit:
+    weight: 0.4
+    question: >-
+      How well does the project solve the problem statement of its track, including the required API?
+    levels:
+      1: Unrelated to the problem statement, or an empty or default template.
+      2: Touches the problem, but the core requirements are missing or only stubbed.
+      3: Covers the core requirements in a basic way; some requirements missing or shallow.
+      4: Covers all core requirements properly with sensible choices.
+      5: Covers all requirements well and handles edge cases, errors and real-world use thoughtfully.
+    examples:
+      - level: 2
+        summary: README promises a full platform; the code has one hard-coded endpoint returning sample data.
+      - level: 4
+        summary: Every required endpoint works with validation and stored data; nothing beyond the brief.
+  completeness:
+    weight: 0.35
+    question: >-
+      How complete and working is the product: real logic and data, not placeholders, mock data or TODOs?
+    levels:
+      1: Mostly placeholders, mock data or generated boilerplate that does nothing.
+      2: Some real functionality, but main paths still fake or broken.
+      3: Main paths work; secondary features missing or fake.
+      4: Works end to end with persistence and error handling.
+      5: Polished end to end, with clear setup instructions and nothing faked.
+    examples:
+      - level: 1
+        summary: Endpoints return hard-coded JSON; database code is commented out.
+      - level: 4
+        summary: Data is stored and read back correctly; invalid input gets clear errors.
+  product_thinking:
+    weight: 0.25
+    question: >-
+      How strong is the idea and product thinking: useful features beyond the brief, clear design, a good
+      experience for the people or developers using it?
+    levels:
+      1: No thought beyond the literal brief, or features that do not make sense together.
+      2: Generic features with no clear user in mind.
+      3: A reasonable product with one or two thoughtful touches.
+      4: A distinctive, coherent product with features that clearly serve its users.
+      5: A genuinely fresh idea or experience that stands out among solutions to the same problem.
+    examples:
+      - level: 1
+        summary: Only the exact endpoints from the brief, with default names and no README.
+      - level: 4
+        summary: Adds search, pagination and clear API docs that make the service easy to use.

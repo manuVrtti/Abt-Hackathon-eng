@@ -156,6 +156,8 @@ def run_plagiarism(min_round: int = 2) -> dict:
     from datasketch import MinHash, MinHashLSH
 
     cfg = get_settings().plagiarism
+    if not cfg.enabled:
+        return {"disabled": True, "note": "plagiarism.enabled is false for this event"}
     with db.session() as s:
         ids = [x.id for x in s.scalars(select(Submission).where(Submission.status == ACTIVE,
                                                                 Submission.round >= min_round))]
