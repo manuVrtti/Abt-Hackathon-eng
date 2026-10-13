@@ -143,6 +143,8 @@ class TestRequest(Base):
     response_headers: Mapped[dict | None]
     response_body: Mapped[str | None] = mapped_column(Text)
     error: Mapped[str | None] = mapped_column(Text)
+    error_kind: Mapped[str | None] = mapped_column(String(32))  # dns | connect | tls | timeouts | protocol
+    remote_ip: Mapped[str | None] = mapped_column(String(64))  # server IP the tester actually reached
     target: Mapped[str] = mapped_column(String(16), default="live")  # live | sandbox
 
 
@@ -177,6 +179,8 @@ class TestAttempt(Base):
     total: Mapped[int] = mapped_column(Integer, default=0)
     reachable: Mapped[bool | None]
     error: Mapped[str | None] = mapped_column(Text)
+    # Tester's own internet check before and after the attempt (proof the fault was not ours).
+    tester_check: Mapped[dict | None]
     __table_args__ = (UniqueConstraint("submission_id", "attempt", "target"),)
 
 

@@ -12,10 +12,10 @@ and a <code>{{ tester.request_id_header }}</code> header you can search for in y
 {% for a in attempts %}<tr><td>{{ a.attempt }}</td><td>{{ a.started_at }}</td><td>{{ a.reachable }}</td><td>{{ a.score }}</td><td>{{ a.error or "" }}</td></tr>{% endfor %}
 </table>
 <h2>Requests</h2>
-<table><tr><th>Request ID</th><th>Time (UTC)</th><th>Request</th><th>Status</th><th>Latency</th><th>Error / body</th></tr>
-{% for r in requests %}<tr><td><code>{{ r.request_id }}</code></td><td>{{ r.time }}</td><td>{{ r.method }} {{ r.url }}</td>
+<table><tr><th>Request ID</th><th>Time (UTC)</th><th>Request</th><th>Server IP</th><th>Status</th><th>Latency</th><th>Error / body</th></tr>
+{% for r in requests %}<tr><td><code>{{ r.request_id }}</code></td><td>{{ r.time }}</td><td>{{ r.method }} {{ r.url }}</td><td>{{ r.remote_ip or "-" }}</td>
 <td>{{ r.status if r.status is not none else "-" }}</td><td>{{ "%.0f ms"|format(r.latency_ms) if r.latency_ms else "-" }}</td>
-<td>{% if r.error %}<span class="bad">{{ r.error }}</span>{% else %}<pre>{{ r.body }}</pre>{% endif %}</td></tr>{% endfor %}
+<td>{% if r.error %}<span class="bad">{{ r.problem or r.error }}</span>{% else %}<pre>{{ r.body }}</pre>{% endif %}</td></tr>{% endfor %}
 </table>
 {% if retest_url %}<h2>Request a re-test</h2>
 <p>You can request <strong>one</strong> re-test before {{ retest_expires_at }} UTC.</p>

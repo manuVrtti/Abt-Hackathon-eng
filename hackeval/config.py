@@ -82,6 +82,12 @@ class TesterCfg(BaseModel):
         "up.railway.app", "fly.dev", "pages.dev", "github.io", "replit.app", "glitch.me",
         "azurewebsites.net", "appspot.com", "web.app", "firebaseapp.com", "koyeb.app",
     ]
+    # Control URLs the tester must reach before and after testing a team. If it
+    # cannot, our network was at fault: the attempt is voided and re-run later,
+    # never counted against the team. Empty list disables the check.
+    canary_urls: list[str] = ["https://www.google.com/generate_204", "https://www.cloudflare.com/cdn-cgi/trace"]
+    # The public "ping my backend" page is open until the deadline.
+    ping_page_enabled: bool = True
     skip_remaining_on_full_score: bool = True
     max_body_bytes: int = 65536
     retest_window_hours: int = 24
@@ -209,6 +215,19 @@ def _cached() -> Settings:
 
 def get_settings() -> Settings:
     return _override if _override is not None else _cached()
+
+
+def save_settings(s: Settings, path: Path | None = None) -> Path:
+    """Validate and write settings back to the YAML file (used by the admin page).
+    Running workers keep their old copy until restarted."""
+    global _override
+    s = Settings.model_validate(s.model_dump())
+    path = path or config_path()
+    path.write_text(yaml.safe_dump(s.model_dump(mode="json"), sort_keys=False), encoding="utf-8")
+    if _override is not None:
+        _override = s
+    _cached.cache_clear()
+    return path
 
 
 def set_settings(s: Settings | None) -> None:

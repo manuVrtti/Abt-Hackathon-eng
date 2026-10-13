@@ -9,4 +9,15 @@
 <p>You can request <strong>one</strong> re-test of your live link. Make sure it is up before you press the button: the tester starts within minutes and waits up to {{ warmup }} seconds for the first response.</p>
 <form method="post"><button class="btn" type="submit">Request my one re-test</button></form>
 {% endif %}
+<h2>Every request we sent you</h2>
+<p>From IP <code>{{ tester.ip }}</code>, User-Agent <code>{{ tester.user_agent }}</code>, each with a unique <code>{{ tester.header }}</code>. Before each attempt our tester confirmed its own internet connection; attempts where it could not were voided and re-run.</p>
+<table><tr><th>#</th><th>Started (UTC)</th><th>Reachable</th><th>Score</th><th>Error</th></tr>
+{% for a in attempts %}<tr><td>{{ a.attempt }}{% if a.is_retest %} (re-test){% endif %}</td><td>{{ a.started_at }}</td><td>{{ a.reachable }}</td><td>{{ a.score }}</td><td>{{ a.error or "" }}</td></tr>{% endfor %}
+</table>
+<table><tr><th>Request ID</th><th>Time (UTC)</th><th>Request</th><th>Server IP</th><th>Status</th><th>Latency</th><th>Problem</th></tr>
+{% for r in requests %}<tr><td><code>{{ r.request_id }}</code></td><td>{{ r.sent_at }}</td><td>{{ r.method }} {{ r.url }}</td>
+<td>{{ r.remote_ip or "-" }}</td><td>{{ r.status_code if r.status_code is not none else "-" }}</td>
+<td>{{ "%.0f ms"|format(r.latency_ms) if r.latency_ms else "-" }}</td>
+<td>{% if r.error_kind %}<span class="bad">{{ error_kinds[r.error_kind] }}</span>{% endif %}</td></tr>{% endfor %}
+</table>
 {% endblock %}

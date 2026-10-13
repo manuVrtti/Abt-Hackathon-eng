@@ -33,6 +33,7 @@ def settings(tmp_path):
     s.snapshot.retry_delays_min = [0, 0]
     s.tester.warmup_timeout_s = 5
     s.tester.request_timeout_s = 5
+    s.tester.canary_urls = []
     s.llm.provider = "mock"
     set_settings(s)
     db.reset_engines()

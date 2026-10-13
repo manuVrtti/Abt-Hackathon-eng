@@ -76,6 +76,48 @@ class RequestRecord:
     response_headers: dict | None = None
     response_body: str | None = None
     error: str | None = None
+    error_kind: str | None = None
+    remote_ip: str | None = None
+
+
+# Plain-language reasons shown to teams, so a failure says exactly where it happened.
+ERROR_KINDS = {
+    "dns": "the domain name could not be resolved (DNS)",
+    "connect": "the connection was refused or could not be opened",
+    "tls": "the HTTPS/TLS handshake failed (certificate problem)",
+    "connect_timeout": "no connection could be opened before the timeout",
+    "read_timeout": "the server accepted the connection but did not answer before the timeout",
+    "protocol": "the server sent an invalid or incomplete HTTP response",
+    "other": "the request failed",
+}
+
+
+def classify_error(e: Exception) -> str:
+    text = str(e).lower()
+    if isinstance(e, httpx.ConnectTimeout):
+        return "connect_timeout"
+    if isinstance(e, (httpx.ReadTimeout, httpx.WriteTimeout, httpx.PoolTimeout)):
+        return "read_timeout"
+    if isinstance(e, httpx.ConnectError):
+        if any(s in text for s in ("getaddrinfo", "name or service", "nodename", "name resolution", "no address")):
+            return "dns"
+        if "ssl" in text or "certificate" in text or "tls" in text:
+            return "tls"
+        return "connect"
+    if isinstance(e, (httpx.RemoteProtocolError, httpx.LocalProtocolError)):
+        return "protocol"
+    return "other"
+
+
+def _peer_ip(r: httpx.Response) -> str | None:
+    stream = r.extensions.get("network_stream")
+    if stream is None:
+        return None
+    try:
+        addr = stream.get_extra_info("server_addr")
+        return str(addr[0]) if addr else None
+    except Exception:  # transport without socket info (tests, proxies)
+        return None
 
 
 @dataclass
@@ -142,14 +184,18 @@ class Ctx:
         self.records.append(rec)
         t0 = time.perf_counter()
         try:
-            r = await self.client.request(method, self.url(path), json=json, data=data, params=params,
-                                          headers=hdrs, timeout=timeout or self.ident.request_timeout_s)
+            async with self.client.stream(method, self.url(path), json=json, data=data, params=params,
+                                          headers=hdrs, timeout=timeout or self.ident.request_timeout_s) as r:
+                # The server IP we actually connected to: proof of where the request went.
+                rec.remote_ip = _peer_ip(r)
+                await r.aread()
             # Record the URL actually requested (including query string).
             rec.url = str(r.request.url)
         except httpx.HTTPError as e:
             rec.latency_ms = (time.perf_counter() - t0) * 1000
             rec.error = f"{type(e).__name__}: {e}"[:1000]
-            raise ExpectationFailed(f"{method.upper()} {path} failed: {type(e).__name__}") from e
+            rec.error_kind = classify_error(e)
+            raise ExpectationFailed(f"{method.upper()} {path} failed: {ERROR_KINDS[rec.error_kind]}") from e
         rec.latency_ms = (time.perf_counter() - t0) * 1000
         rec.status_code = r.status_code
         rec.response_headers = {k: v for k, v in r.headers.items()
