@@ -16,6 +16,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import shutil
+import tarfile
 import time
 from datetime import timedelta
 from pathlib import Path
@@ -40,6 +41,24 @@ def clone_url(sub: Submission) -> str:
 
 def repo_dir(sub_id: int) -> Path:
     return get_settings().path("repos") / f"{sub_id}.git"
+
+
+def extract_tree(repo: Path, sha: str, dest: Path, env: dict) -> str | None:
+    """Write the commit's files to dest via `git archive` (portable: no shell or tar binary).
+    Returns an error message, or None on success."""
+    archive = dest.parent / f"{dest.name}.tar"
+    try:
+        r = run(["git", "-C", str(repo), "archive", "--format=tar", f"--output={archive}", sha],
+                timeout=900, env=env)
+        if r.code != 0:
+            return r.err
+        with tarfile.open(archive) as tf:
+            tf.extractall(dest, filter="data")  # "data" blocks absolute paths, .. and device files
+        return None
+    except (OSError, tarfile.TarError) as e:
+        return str(e)
+    finally:
+        archive.unlink(missing_ok=True)
 
 
 def _git_cmd(args: list[str], timeout: float, cwd: Path | None = None):
@@ -312,10 +331,9 @@ def fetch_full_job(p: dict) -> dict:
         code = cfg.path("code") / str(sub_id)
         shutil.rmtree(code, ignore_errors=True)
         code.mkdir(parents=True)
-        ra = run(["bash", "-c", f"git -C '{work}' archive --format=tar '{sha}' | tar -x -C '{code}'"],
-                 timeout=900, env=env)
-        if ra.code != 0:
-            raise jobs.Retry(600, f"extract failed: {ra.err[-300:]}")
+        err = extract_tree(work, sha, code, env)
+        if err:
+            raise jobs.Retry(600, f"extract failed: {err[-300:]}")
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     with db.session() as s:
