@@ -1,0 +1,79 @@
+# Vicodathon: 48-hour vibe-coding hackathon, API/backend problem statements.
+# Copy to hackeval.yaml (or set HACKEVAL_CONFIG) and fill in the dates, IP and keys.
+# Values marked PUBLISH go into the participant kit (`hackeval public-kit kit/`).
+#
+# What is different from a classic hackathon, and why:
+# - AI-written code is the point, so code plagiarism and commit-pattern
+#   ("authenticity") scoring are off: the same AI tools produce similar code
+#   and few, large commits for everyone. Copying another TEAM's project is
+#   still caught: same repo, same live link, fork of another team, or
+#   byte-identical code are flagged in Round 1.
+# - The first-commit-size check is off (AI builders create the app in one go).
+# - Score = working API (hidden tests) + LLM product rubric + hygiene
+#   (no leaked keys, README). Each problem statement is ranked on its own.
+
+database_url: postgresql+psycopg://hackeval:CHANGE_ME@localhost:5432/hackeval
+data_dir: data
+tracks_dir: tracks              # one folder per problem statement, e.g. tracks/ps1, tracks/ps2, tracks/ps3
+github_token_env: GITHUB_TOKEN
+appeal_window_hours: 24         # PUBLISH
+
+event:
+  name: Vicodathon
+  start: 2026-11-01T10:00:00+05:30      # PUBLISH
+  deadline: 2026-11-03T10:00:00+05:30   # PUBLISH: 48 hours after start
+  public_base_url: https://eval.vicodathon.example   # appeals, re-tests, tester check page
+
+rules:
+  min_commits: 1                 # PUBLISH. AI app builders may push everything in one commit
+  first_commit_check: false      # AI builders create the whole app in the first commit
+  repo_size_limit_mb: 200        # PUBLISH
+  repo_size_action: flag
+  duplicate_jaccard_flag: 0.90   # only near-identical code between teams is flagged
+  boilerplate_min_repos: 5
+
+plagiarism:
+  enabled: false                 # same AI + same problem = similar code; not evidence of copying
+
+quality:
+  parts: {readme: 35, static: 0, secrets: 50, hygiene: 15}   # leaked API keys matter most
+
+tester:
+  published_ip: 203.0.113.10     # PUBLISH: the server's fixed IP
+  user_agent: "Vicodathon-Tester/1.0 (+https://vicodathon.example/tester)"   # PUBLISH
+  request_id_header: X-Eval-Request-ID   # PUBLISH
+  attempts: 3
+  spread_hours: 6
+  warmup_timeout_s: 90
+  request_timeout_s: 20
+  retest_window_hours: 24
+
+weights:                         # PUBLISH
+  tests: 0.60                    # the API works as specified (hidden tests)
+  llm: 0.30                      # problem fit, completeness, product thinking
+  quality: 0.10                  # no leaked secrets, README, clean repo
+  authenticity: 0.0
+
+llm:
+  provider: anthropic
+  model: claude-haiku-5-5
+  rubric_path: vibe              # built-in vibe-coding rubric (hackeval/rubric/vibe.yaml). PUBLISH
+  top_n: 500
+  token_cap: 30000
+  second_pass_band: 50
+  batch: true
+
+ranking:
+  per_track: true                # each problem statement ranked on its own
+  to_voting: 200                 # split between problem statements by number of teams
+  cutoff_review_band: 10         # per problem statement
+
+judging:
+  judges_per_team: 3
+  scale_max: 10
+  criteria: {working_product: 0.3, problem_fit: 0.25, idea_and_product: 0.25, presentation: 0.2}
+  finale_criteria: {live_change_request: 0.4, demo_quality: 0.3, idea_and_product: 0.3}
+
+audit:
+  sample_rate: 0.02
+  max_error_rate: 0.01

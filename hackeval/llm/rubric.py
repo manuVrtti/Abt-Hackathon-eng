@@ -49,11 +49,16 @@ class Rubric:
         return round(100 * sum(c.weight * (scores[c.key] - 1) / 4 for c in self.criteria) / total_w, 2)
 
 
+BUILTIN = ("default", "vibe")
+
+
 def load_rubric(path: str | Path | None = None) -> Rubric:
-    if path:
-        data = yaml.safe_load(Path(path).read_text())
+    """Load a rubric file, or a built-in one by name ("default", "vibe")."""
+    name = str(path) if path else "default"
+    if name in BUILTIN:
+        data = yaml.safe_load(resources.files("hackeval").joinpath(f"rubric/{name}.yaml").read_text(encoding="utf-8"))
     else:
-        data = yaml.safe_load(resources.files("hackeval").joinpath("rubric/default.yaml").read_text())
+        data = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
     crits = [Criterion(key=k, weight=float(v.get("weight", 1)), question=v["question"],
                        levels={int(l): t for l, t in v["levels"].items()}, examples=v.get("examples", []))
              for k, v in data["criteria"].items()]

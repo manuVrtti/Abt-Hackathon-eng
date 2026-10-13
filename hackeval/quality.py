@@ -24,8 +24,6 @@ from .models import Score, Submission
 from .snapshot import code_path
 from .util import run
 
-PARTS = {"readme": 25, "static": 40, "secrets": 20, "hygiene": 15}
-
 SECRET_PATTERNS = {
     "aws_access_key": r"AKIA[0-9A-Z]{16}",
     "github_token": r"gh[pousr]_[A-Za-z0-9]{36,}",
@@ -201,30 +199,35 @@ def hygiene_score(root: Path) -> tuple[float, dict]:
 
 
 def assess(root: Path, live_url: str = "") -> tuple[float, dict]:
+    weights = {k: v for k, v in get_settings().quality.parts.items() if v > 0}
     loc, langs = count_loc(root)
     kloc = max(loc / 1000, 0.2)
     parts: dict[str, float] = {}
     detail: dict = {"loc": loc, "languages": langs}
 
-    parts["readme"], detail["readme"] = readme_score(root, live_url)
-    weighted, lint = lint_issues(root)
-    detail["static"] = lint
-    if weighted is not None:
-        density = weighted / kloc
-        detail["static"]["issues_per_kloc"] = round(density, 2)
-        parts["static"] = round(100 * math.exp(-density / 15), 2)
-    secrets, tool = secrets_scan(root)
-    parts["secrets"] = 0.0 if secrets else 100.0
-    detail["secrets"] = {"tool": tool, "count": len(secrets), "findings": secrets[:20]}
-    parts["hygiene"], detail["hygiene"] = hygiene_score(root)
+    if "readme" in weights:
+        parts["readme"], detail["readme"] = readme_score(root, live_url)
+    if "static" in weights:
+        weighted, lint = lint_issues(root)
+        detail["static"] = lint
+        if weighted is not None:
+            density = weighted / kloc
+            detail["static"]["issues_per_kloc"] = round(density, 2)
+            parts["static"] = round(100 * math.exp(-density / 15), 2)
+    if "secrets" in weights:
+        secrets, tool = secrets_scan(root)
+        parts["secrets"] = 0.0 if secrets else 100.0
+        detail["secrets"] = {"tool": tool, "count": len(secrets), "findings": secrets[:20]}
+    if "hygiene" in weights:
+        parts["hygiene"], detail["hygiene"] = hygiene_score(root)
     if loc == 0:
         detail["note"] = "no code files found"
-    total_w = sum(PARTS[k] for k in parts)
-    value = sum(parts[k] * PARTS[k] for k in parts) / total_w
+    total_w = sum(weights[k] for k in parts) or 1
+    value = sum(parts[k] * weights[k] for k in parts) / total_w
     if loc == 0:
         value = min(value, 10.0)
     detail["parts"] = parts
-    detail["weights_used"] = {k: PARTS[k] for k in parts}
+    detail["weights_used"] = {k: weights[k] for k in parts}
     return round(value, 2), detail
 
 

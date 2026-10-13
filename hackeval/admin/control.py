@@ -223,6 +223,16 @@ def page_rules(reviewer: str):
         w_a = c3.number_input("Authenticity %", 0, 100, round(cfg.weights.authenticity * 100))
         w_l = c4.number_input("LLM rubric %", 0, 100, round(cfg.weights.llm * 100))
 
+        st.subheader("Event style")
+        vibe_rubric = st.checkbox("Vibe-coding rubric for the LLM judge (problem fit, completeness, product "
+                                  "thinking; AI-written code is fine)", value=str(cfg.llm.rubric_path) == "vibe")
+        plag = st.checkbox("Code-similarity plagiarism between teams (turn off for vibe coding)",
+                           value=cfg.plagiarism.enabled)
+        first_commit = st.checkbox("Flag repos whose first commit holds most of the code (turn off for vibe coding)",
+                                   value=cfg.rules.first_commit_check)
+        per_track = st.checkbox("Rank each problem statement separately (places split by number of teams)",
+                                value=cfg.ranking.per_track)
+
         st.subheader("Shortlists")
         top_n = st.number_input("Teams scored by the LLM rubric", 10, 5000, cfg.llm.top_n)
         to_voting = st.number_input("Teams sent to voting", 1, 2000, cfg.ranking.to_voting)
@@ -253,6 +263,11 @@ def page_rules(reviewer: str):
         new.weights.authenticity, new.weights.llm = w_a / 100, w_l / 100
         new.llm.top_n, new.llm.provider, new.llm.model = int(top_n), provider, model
         new.ranking.to_voting, new.ranking.cutoff_review_band = int(to_voting), int(band)
+        new.ranking.per_track, new.plagiarism.enabled, new.rules.first_commit_check = per_track, plag, first_commit
+        if vibe_rubric:
+            new.llm.rubric_path = "vibe"
+        elif str(cfg.llm.rubric_path) == "vibe":
+            new.llm.rubric_path = None
         old_d, new_d = cfg.model_dump(mode="json"), new.model_dump(mode="json")
         diff = {k: {"old": old_d[k], "new": new_d[k]} for k in new_d if old_d[k] != new_d[k]}
         path = save_settings(new)

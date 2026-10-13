@@ -169,3 +169,42 @@ def set_paused(round_: int, paused: bool, reason: str, actor: str = "operator") 
         st.paused, st.reason = paused, reason
         s.merge(st)
         db.log_event(s, actor, "round_paused" if paused else "round_resumed", None, round=round_, reason=reason)
+
+
+def change_track(sub_id: int, new_track: str, reviewer: str, note: str = "") -> dict:
+    """Move a team to another track (problem statement), e.g. when it picked
+    the wrong one on the form. Results from the old track's tests and LLM
+    judging no longer apply, so they are cleared and the team is re-tested."""
+
+    from sqlalchemy import delete
+
+    from . import jobs
+    from .models import LLMScore, Score, TestAttempt, TestRequest, TestResult
+    from .tracks import get_track
+
+    get_track(new_track)  # raises KeyError for an unknown track
+    cfg = get_settings().tester
+    with db.session() as s:
+        sub = s.get(Submission, sub_id)
+        old = sub.track
+        if old == new_track:
+            return {"changed": False}
+        live = (TestAttempt.submission_id == sub_id, TestAttempt.target == "live")
+        cleared = len(s.scalars(select(TestAttempt).where(*live)).all())
+        s.execute(delete(TestRequest).where(TestRequest.submission_id == sub_id, TestRequest.target == "live"))
+        s.execute(delete(TestResult).where(TestResult.submission_id == sub_id, TestResult.target == "live"))
+        s.execute(delete(TestAttempt).where(*live))
+        s.execute(delete(LLMScore).where(LLMScore.submission_id == sub_id))
+        s.execute(delete(Score).where(Score.submission_id == sub_id, Score.component.in_(("tests", "llm", "total"))))
+        sub.track = new_track
+        retested = False
+        if cleared or s.scalars(select(jobs.Job).where(jobs.Job.key.like(f"livetest:{sub_id}:%"))).first():
+            now = utcnow()
+            for i in range(1, cfg.attempts + 1):
+                offset = 0 if cfg.attempts == 1 else cfg.spread_hours * (i - 1) / (cfg.attempts - 1)
+                jobs.enqueue(s, "livetest", f"{sub_id}:{i}", {"submission_id": sub_id, "attempt": i},
+                             run_after=now + timedelta(hours=offset), max_attempts=2, requeue=True)
+            retested = True
+        db.log_event(s, reviewer, "track_changed", sub_id, old=old, new=new_track, note=note,
+                     cleared_attempts=cleared, retest_queued=retested)
+    return {"changed": True, "old": old, "new": new_track, "cleared_attempts": cleared, "retest_queued": retested}
