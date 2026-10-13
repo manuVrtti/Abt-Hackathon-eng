@@ -347,7 +347,11 @@ if who:
     if role == "judge":
         page_judge(ident)
     else:
-        pages = {"Dashboard": page_dashboard, "Flag queue": page_flags, "Appeals": page_appeals,
+        from hackeval.admin.control import page_rounds, page_rules, page_submissions, page_tracks
+
+        pages = {"Dashboard": page_dashboard, "Submissions": page_submissions, "Problem statements": page_tracks,
+                 "Rules & settings": page_rules, "Run rounds": page_rounds,
+                 "Flag queue": page_flags, "Appeals": page_appeals,
                  "Team lookup": page_team, "R2 ranking": page_ranking, "Audit": page_audit,
                  "Sandbox (R4)": page_sandbox, "Judging results": page_judging_results}
         choice = st.sidebar.radio("Page", list(pages))

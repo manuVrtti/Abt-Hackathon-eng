@@ -79,7 +79,8 @@ async def run_tests(sub_id: int, base_url: str, track_id: str) -> SuiteResult:
             return await run_suite(tests, base_url, identity(), client=client, warmup_path=track.warmup_path)
 
 
-def store_result(s: Session, sub_id: int, attempt: int, target: str, res: SuiteResult, is_retest: bool = False) -> TestAttempt:
+def store_result(s: Session, sub_id: int, attempt: int, target: str, res: SuiteResult, is_retest: bool = False,
+                 tester_check: dict | None = None) -> TestAttempt:
     max_body = get_settings().tester.max_body_bytes
     # Safe re-run: replace this attempt's rows.
     s.execute(delete(TestRequest).where(TestRequest.submission_id == sub_id, TestRequest.attempt == attempt,
@@ -91,7 +92,8 @@ def store_result(s: Session, sub_id: int, attempt: int, target: str, res: SuiteR
                           request_id=r.request_id, method=r.method, url=r.url,
                           request_body=truncate(r.request_body, 8192), sent_at=r.sent_at,
                           status_code=r.status_code, latency_ms=r.latency_ms, response_headers=r.response_headers,
-                          response_body=truncate(r.response_body, max_body), error=r.error))
+                          response_body=truncate(r.response_body, max_body), error=r.error,
+                          error_kind=r.error_kind, remote_ip=r.remote_ip))
     for o in res.outcomes:
         s.add(TestResult(submission_id=sub_id, attempt=attempt, target=target, test_id=o.test_id,
                          category=o.category, weight=o.weight, passed=o.passed, message=o.message,
@@ -105,6 +107,7 @@ def store_result(s: Session, sub_id: int, attempt: int, target: str, res: SuiteR
     ta.started_at, ta.finished_at = res.started_at, res.finished_at
     ta.score, ta.passed, ta.total = res.score, res.passed, len(res.outcomes)
     ta.reachable, ta.error = res.reachable, res.error
+    ta.tester_check = tester_check
     s.flush()
     return ta
 
@@ -124,6 +127,23 @@ def update_test_score(s: Session, sub_id: int) -> float:
     return value
 
 
+async def tester_online() -> dict:
+    """True if the tester can reach at least one control URL (or none are configured)."""
+    urls = get_settings().tester.canary_urls
+    if not urls:
+        return {"online": True, "checked": []}
+    checked = []
+    async with httpx.AsyncClient(timeout=10) as client:
+        for u in urls:
+            try:
+                r = await client.get(u)
+                checked.append({"url": u, "status": r.status_code, "at": utcnow().isoformat()})
+                return {"online": True, "checked": checked}
+            except httpx.HTTPError as e:
+                checked.append({"url": u, "error": type(e).__name__, "at": utcnow().isoformat()})
+    return {"online": False, "checked": checked}
+
+
 @jobs.handler("livetest")
 async def livetest_job(p: dict) -> dict:
     cfg = get_settings().tester
@@ -141,6 +161,11 @@ async def livetest_job(p: dict) -> dict:
         return {"skipped": f"status={status}"}
     if not is_retest and cfg.skip_remaining_on_full_score and best is not None and best >= 100:
         return {"skipped": "already full score"}
+    # Our own network must work before we test a team, or the attempt would
+    # blame the team for our outage. Voided attempts re-run later.
+    before = await tester_online()
+    if not before["online"]:
+        raise jobs.Retry(600, f"tester offline before attempt; voided: {before}")
     if not live_url:
         res = SuiteResult(base_url="", reachable=False, error="no live link submitted")
         tests = get_track(track).load_hidden()
@@ -150,10 +175,17 @@ async def livetest_job(p: dict) -> dict:
         res.started_at = res.finished_at = utcnow()
     else:
         res = await run_tests(sub_id, live_url, track)
+    after = None
+    if any(r.error_kind for r in res.records):
+        # A network-level failure: re-check that it was not on our side.
+        after = await tester_online()
+        if not after["online"]:
+            raise jobs.Retry(600, f"tester lost internet during attempt; voided: {after}")
+    check = {"before": before, "after": after}
 
     def save():
         with db.session() as s:
-            store_result(s, sub_id, attempt, "live", res, is_retest)
+            store_result(s, sub_id, attempt, "live", res, is_retest, tester_check=check)
             value = update_test_score(s, sub_id)
             last_scheduled = attempt >= cfg.attempts
             if (last_scheduled or is_retest) and value == 0:

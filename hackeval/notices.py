@@ -14,6 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .config import get_settings
+from .livetest.framework import ERROR_KINDS
 from .models import Appeal, Check, Flag, Notice, Submission, TestAttempt, TestRequest
 
 _env = Environment(loader=PackageLoader("hackeval", "templates"), autoescape=select_autoescape())
@@ -68,7 +69,9 @@ def test_log_notice(s: Session, sub: Submission, retest: Appeal | None) -> Notic
                       "reachable": a.reachable, "error": a.error} for a in attempts],
         "requests": [{"attempt": r.attempt, "request_id": r.request_id, "time": r.sent_at, "method": r.method,
                       "url": r.url, "status": r.status_code, "latency_ms": r.latency_ms,
-                      "error": r.error, "body": (r.response_body or "")[:2000]} for r in reqs],
+                      "error": r.error, "remote_ip": r.remote_ip,
+                      "problem": ERROR_KINDS.get(r.error_kind) if r.error_kind else None,
+                      "body": (r.response_body or "")[:2000]} for r in reqs],
         "retest_url": appeal_link(retest) if retest else None,
         "retest_expires_at": retest.expires_at if retest else None,
     }

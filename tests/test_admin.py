@@ -39,7 +39,7 @@ def test_reviewer_pages_render(settings, monkeypatch):
     at.text_input[1].input("secret")
     at.button[0].click().run()
     assert not at.exception
-    for page in ["Dashboard", "Flag queue", "Appeals", "Team lookup", "R2 ranking", "Audit", "Sandbox (R4)",
+    for page in ["Dashboard", "Submissions", "Problem statements", "Rules & settings", "Run rounds", "Flag queue", "Appeals", "Team lookup", "R2 ranking", "Audit", "Sandbox (R4)",
                  "Judging results"]:
         at.sidebar.radio[0].set_value(page).run()
         assert not at.exception, (page, at.exception)

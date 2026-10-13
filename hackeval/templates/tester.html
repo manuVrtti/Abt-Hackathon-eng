@@ -1,0 +1,36 @@
+{% extends "_base.html" %}
+{% block title %}Tester check{% endblock %}
+{% block body %}
+<h1>Check that our tester reaches your backend</h1>
+<p class="muted">{{ event }} · open until the deadline, {{ deadline }} UTC</p>
+<p>Every request the evaluation tester sends comes from one IP address, with one User-Agent and a unique request ID header:</p>
+<table>
+<tr><th>Tester IP</th><td><code>{{ tester.ip }}</code></td></tr>
+<tr><th>User-Agent</th><td><code>{{ tester.user_agent }}</code></td></tr>
+<tr><th>Request ID header</th><td><code>{{ tester.header }}</code></td></tr>
+<tr><th>Attempts</th><td>{{ tester.attempts }} attempts spread over {{ tester.spread_hours }} hours; the best one counts</td></tr>
+<tr><th>Cold starts</th><td>The first request of each attempt waits up to {{ tester.warmup }} seconds</td></tr>
+</table>
+<p>Do not block this IP or User-Agent (rate limiters, bot protection, Cloudflare challenges, IP allow-lists), and log incoming request headers so you can find our requests.</p>
+{% if open %}
+<h2>Send one test request now</h2>
+<form method="post">
+<p><input name="url" value="{{ url }}" placeholder="https://your-app.example.com/health" required
+ style="width:100%;font:inherit;padding:8px;box-sizing:border-box;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:6px"></p>
+<p><button class="btn" type="submit">Send test request</button></p>
+</form>
+{% else %}<p class="warn">This check is closed.</p>{% endif %}
+{% if error %}<p class="bad">{{ error }}</p>{% endif %}
+{% if result %}
+<h2>Result</h2>
+<table>
+<tr><th>Request ID</th><td><code>{{ result.request_id }}</code> (search your logs for this)</td></tr>
+<tr><th>Sent at (UTC)</th><td>{{ result.sent_at }}</td></tr>
+<tr><th>URL</th><td>GET {{ result.url }}</td></tr>
+<tr><th>Server IP reached</th><td>{{ result.remote_ip or "n/a" }}</td></tr>
+<tr><th>Response</th><td>{% if result.error %}<span class="bad">No response: {{ result.error }}</span>{% else %}<span class="ok">HTTP {{ result.status_code }}</span>{% endif %}</td></tr>
+<tr><th>Time</th><td>{{ result.latency_ms }} ms</td></tr>
+</table>
+<p class="muted">A response here means our server can reach yours. If request ID <code>{{ result.request_id }}</code> is not in your logs, something in front of your app (CDN, proxy, hosting platform) answered instead.</p>
+{% endif %}
+{% endblock %}
